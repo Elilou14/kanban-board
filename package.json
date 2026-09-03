@@ -1,0 +1,12 @@
+{
+  "name": "kanban-board",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A Trello-style Kanban board: a pure reducer with undo/redo, drag & drop, localStorage first, evolving into a full-stack app with a real SQLite database.",
+  "scripts": {
+    "test": "node --test",
+    "start": "node server/server.js"
+  },
+  "license": "MIT"
+}
