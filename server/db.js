@@ -89,12 +89,13 @@ export function createBoard(db, title, idGenerator = defaultId) {
 }
 
 export function deleteBoard(db, boardId) {
-  transaction(db, () => {
+  return transaction(db, () => {
     const columnIds = db.prepare("SELECT id FROM columns WHERE boardId = ?").all(boardId).map((c) => c.id);
     const deleteCards = db.prepare("DELETE FROM cards WHERE columnId = ?");
     for (const columnId of columnIds) deleteCards.run(columnId);
     db.prepare("DELETE FROM columns WHERE boardId = ?").run(boardId);
-    db.prepare("DELETE FROM boards WHERE id = ?").run(boardId);
+    const { changes } = db.prepare("DELETE FROM boards WHERE id = ?").run(boardId);
+    return changes > 0;
   });
 }
 
@@ -144,30 +145,34 @@ export function addColumn(db, boardId, title, idGenerator = defaultId) {
 
 export function renameColumn(db, columnId, title) {
   const trimmed = requireTitle(title, "Column");
-  db.prepare("UPDATE columns SET title = ? WHERE id = ?").run(trimmed, columnId);
+  const { changes } = db.prepare("UPDATE columns SET title = ? WHERE id = ?").run(trimmed, columnId);
+  return changes > 0;
 }
 
 export function deleteColumn(db, columnId) {
-  transaction(db, () => {
+  return transaction(db, () => {
     db.prepare("DELETE FROM cards WHERE columnId = ?").run(columnId);
-    db.prepare("DELETE FROM columns WHERE id = ?").run(columnId);
+    const { changes } = db.prepare("DELETE FROM columns WHERE id = ?").run(columnId);
+    return changes > 0;
   });
 }
 
-export function moveColumn(db, boardId, columnId, toIndex) {
-  transaction(db, () => {
+export function moveColumn(db, columnId, toIndex) {
+  return transaction(db, () => {
+    const column = db.prepare("SELECT boardId FROM columns WHERE id = ?").get(columnId);
+    if (!column) return false;
+
     const ids = db
       .prepare("SELECT id FROM columns WHERE boardId = ? ORDER BY position ASC")
-      .all(boardId)
+      .all(column.boardId)
       .map((c) => c.id);
     const fromIndex = ids.indexOf(columnId);
-    if (fromIndex === -1) return;
-
     ids.splice(fromIndex, 1);
     const clamped = Math.max(0, Math.min(toIndex, ids.length));
     ids.splice(clamped, 0, columnId);
 
-    renumber(db, "columns", "boardId", boardId, ids);
+    renumber(db, "columns", "boardId", column.boardId, ids);
+    return true;
   });
 }
 
@@ -190,9 +195,10 @@ export function addCard(db, columnId, title, idGenerator = defaultId) {
   return card;
 }
 
+/** Returns the updated card, or null if `cardId` doesn't exist. */
 export function editCard(db, cardId, changes) {
   const current = db.prepare("SELECT title, description, labels FROM cards WHERE id = ?").get(cardId);
-  if (!current) return;
+  if (!current) return null;
 
   const title = changes.title !== undefined ? requireTitle(changes.title, "Card") : current.title;
   const description = changes.description !== undefined ? changes.description : current.description;
@@ -204,16 +210,18 @@ export function editCard(db, cardId, changes) {
     JSON.stringify(labels),
     cardId
   );
+  return { id: cardId, title, description, labels };
 }
 
 export function deleteCard(db, cardId) {
-  db.prepare("DELETE FROM cards WHERE id = ?").run(cardId);
+  const { changes } = db.prepare("DELETE FROM cards WHERE id = ?").run(cardId);
+  return changes > 0;
 }
 
 export function moveCard(db, cardId, toColumnId, toIndex) {
-  transaction(db, () => {
+  return transaction(db, () => {
     const card = db.prepare("SELECT columnId FROM cards WHERE id = ?").get(cardId);
-    if (!card) return;
+    if (!card) return false;
     const fromColumnId = card.columnId;
 
     const targetIds = db
@@ -234,5 +242,6 @@ export function moveCard(db, cardId, toColumnId, toIndex) {
         .map((c) => c.id);
       renumber(db, "cards", "columnId", fromColumnId, sourceIds);
     }
+    return true;
   });
 }

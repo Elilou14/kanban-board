@@ -115,7 +115,7 @@ test("addColumn / renameColumn / deleteColumn", async (t) => {
 test("moveColumn", async (t) => {
   await t.test("reorders columns within the board", () => {
     const { db, board, done } = seededBoard(openDb(":memory:"));
-    moveColumn(db, board.id, done.id, 0);
+    moveColumn(db, done.id, 0);
     assert.deepEqual(
       getBoardDetail(db, board.id).columns.map((c) => c.title),
       ["Termine", "A faire"]
@@ -124,11 +124,16 @@ test("moveColumn", async (t) => {
 
   await t.test("clamps an out-of-range index", () => {
     const { db, board, todo } = seededBoard(openDb(":memory:"));
-    moveColumn(db, board.id, todo.id, 999);
+    moveColumn(db, todo.id, 999);
     assert.deepEqual(
       getBoardDetail(db, board.id).columns.map((c) => c.title),
       ["Termine", "A faire"]
     );
+  });
+
+  await t.test("unknown column id returns false", () => {
+    const { db } = seededBoard(openDb(":memory:"));
+    assert.equal(moveColumn(db, "missing", 0), false);
   });
 });
 
@@ -159,9 +164,9 @@ test("addCard / editCard / deleteCard", async (t) => {
     assert.equal(detail.cards[card.id].description, "2%, not skim"); // untouched
   });
 
-  await t.test("editCard on an unknown id is a no-op", () => {
+  await t.test("editCard on an unknown id returns null", () => {
     const db = openDb(":memory:");
-    assert.doesNotThrow(() => editCard(db, "missing", { title: "x" }));
+    assert.equal(editCard(db, "missing", { title: "x" }), null);
   });
 
   await t.test("deleteCard removes it from its column", () => {
@@ -203,8 +208,8 @@ test("moveCard", async (t) => {
     assert.deepEqual(getBoardDetail(db, board.id).columns[1].cardIds, [card.id]);
   });
 
-  await t.test("unknown card id is a no-op", () => {
+  await t.test("unknown card id returns false", () => {
     const { db } = seededBoard(openDb(":memory:"));
-    assert.doesNotThrow(() => moveCard(db, "missing", "also-missing", 0));
+    assert.equal(moveCard(db, "missing", "also-missing", 0), false);
   });
 });
