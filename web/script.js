@@ -48,10 +48,37 @@ function sampleBoard() {
   return board;
 }
 
+// ---- persistence ----
+
+const STORAGE_KEY = "kanban-board:v1";
+
+function loadBoard() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return sampleBoard();
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.columns) || typeof parsed.cards !== "object") return sampleBoard();
+    return parsed;
+  } catch {
+    return sampleBoard(); // corrupt JSON, or storage unavailable (private browsing)
+  }
+}
+
+function saveBoard(board) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(board));
+  } catch {
+    // storage full or unavailable -- the board still works in-memory for this session
+  }
+}
+
 // ---- state ----
 
 const dispatchToHistory = createHistoryReducer(boardReducer);
-let history = initHistory(sampleBoard());
+// Undo/redo history itself isn't persisted, only the board it points
+// at -- each page load starts a fresh (empty) history over whatever
+// board was last saved.
+let history = initHistory(loadBoard());
 
 // Transient, render-only UI state (which inline form is open, which
 // card to refocus after the next render). Reset implicitly on every
@@ -64,6 +91,7 @@ function dispatch(action) {
   history = dispatchToHistory(history, action);
   addingColumn = false;
   addingCardInColumn = null;
+  saveBoard(history.present);
   update();
 }
 
@@ -152,6 +180,12 @@ function update() {
 
 function render(board) {
   boardEl.innerHTML = "";
+  if (board.columns.length === 0) {
+    const msg = document.createElement("p");
+    msg.className = "empty-board-message";
+    msg.textContent = "Ajoutez votre premiere colonne pour commencer.";
+    boardEl.appendChild(msg);
+  }
   for (const column of board.columns) {
     boardEl.appendChild(renderColumn(board, column));
   }
@@ -210,7 +244,21 @@ function renderCard(card, columnId) {
     pill.className = "card-label";
     pill.style.background = LABEL_COLORS[label] ?? "var(--muted)";
     pill.textContent = label;
+    pill.title = "Cliquer pour retirer";
+    pill.addEventListener("click", () => {
+      dispatch({ type: "EDIT_CARD", cardId: card.id, changes: { labels: card.labels.filter((l) => l !== label) } });
+    });
     labelsEl.appendChild(pill);
+  }
+
+  const availableLabels = Object.keys(LABEL_COLORS).filter((l) => !card.labels.includes(l));
+  if (availableLabels.length > 0) {
+    const addLabelBtn = document.createElement("button");
+    addLabelBtn.type = "button";
+    addLabelBtn.className = "card-label-add-btn";
+    addLabelBtn.textContent = "+ etiquette";
+    addLabelBtn.addEventListener("click", () => openLabelPicker(addLabelBtn, labelsEl, card, availableLabels));
+    labelsEl.appendChild(addLabelBtn);
   }
 
   node.querySelector(".card-delete-btn").addEventListener("click", () => {
@@ -220,6 +268,36 @@ function renderCard(card, columnId) {
   attachCardDragHandlers(node, card.id, columnId);
 
   return node;
+}
+
+function openLabelPicker(addLabelBtn, labelsEl, card, availableLabels) {
+  const picker = document.createElement("div");
+  picker.className = "label-picker";
+
+  for (const label of availableLabels) {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "label-picker-option";
+    option.style.background = LABEL_COLORS[label];
+    option.textContent = label;
+    option.addEventListener("click", (event) => {
+      event.stopPropagation();
+      dispatch({ type: "EDIT_CARD", cardId: card.id, changes: { labels: [...card.labels, label] } });
+    });
+    picker.appendChild(option);
+  }
+
+  addLabelBtn.replaceWith(picker);
+
+  // Close the picker on an outside click without picking anything.
+  // Deferred so the click that opened it doesn't immediately close it.
+  setTimeout(() => document.addEventListener("click", closeOnOutsideClick), 0);
+  function closeOnOutsideClick(event) {
+    if (picker.isConnected && !picker.contains(event.target)) {
+      picker.replaceWith(addLabelBtn);
+    }
+    document.removeEventListener("click", closeOnOutsideClick);
+  }
 }
 
 function renderAddColumnAffordance() {
