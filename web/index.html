@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban Board</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Kanban Board</h1>
+    <div class="toolbar">
+      <button id="undo-btn" type="button" class="icon-btn" title="Annuler (Ctrl+Z)" disabled>↶ Annuler</button>
+      <button id="redo-btn" type="button" class="icon-btn" title="Retablir (Ctrl+Maj+Z)" disabled>↷ Retablir</button>
+    </div>
+  </header>
+
+  <main id="board" class="board" aria-label="Tableau Kanban"></main>
+
+  <template id="column-template">
+    <section class="column">
+      <header class="column-header">
+        <h2 class="column-title" tabindex="0" role="button" title="Cliquer pour renommer"></h2>
+        <span class="card-count"></span>
+        <button class="column-delete-btn" type="button" aria-label="Supprimer la colonne">&times;</button>
+      </header>
+      <ul class="card-list"></ul>
+      <button class="add-card-btn" type="button">+ Ajouter une carte</button>
+    </section>
+  </template>
+
+  <template id="card-template">
+    <li class="card" draggable="true" tabindex="0">
+      <div class="card-labels"></div>
+      <p class="card-title" title="Cliquer pour modifier"></p>
+      <button class="card-delete-btn" type="button" aria-label="Supprimer la carte">&times;</button>
+    </li>
+  </template>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
