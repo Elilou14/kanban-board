@@ -88,6 +88,10 @@ body {
   outline-offset: -2px;
 }
 
+.column.dragging {
+  opacity: 0.4;
+}
+
 .column-header {
   display: flex;
   align-items: center;
