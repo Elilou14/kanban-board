@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban Board</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="back-btn" type="button" class="icon-btn" hidden>&larr; Tableaux</button>
+      <h1 id="page-title">Kanban Board</h1>
+    </div>
+    <p id="error-banner" class="error-banner" role="alert" hidden></p>
+  </header>
+
+  <section id="picker" class="picker">
+    <form id="new-board-form" class="new-board-form">
+      <input type="text" id="new-board-title" placeholder="Nom du tableau" maxlength="100" autocomplete="off" />
+      <button type="submit">Creer</button>
+    </form>
+    <ul id="board-list" class="board-list"></ul>
+    <p id="no-boards-message" class="empty-board-message" hidden>Aucun tableau pour l'instant -- creez-en un ci-dessus.</p>
+  </section>
+
+  <main id="board" class="board" aria-label="Tableau Kanban" hidden></main>
+
+  <template id="column-template">
+    <section class="column">
+      <header class="column-header">
+        <h2 class="column-title" tabindex="0" role="button" title="Cliquer pour renommer"></h2>
+        <span class="card-count"></span>
+        <button class="column-delete-btn" type="button" aria-label="Supprimer la colonne">&times;</button>
+      </header>
+      <ul class="card-list"></ul>
+      <button class="add-card-btn" type="button">+ Ajouter une carte</button>
+    </section>
+  </template>
+
+  <template id="card-template">
+    <li class="card" draggable="true" tabindex="0" aria-label="Glisser-deposer, ou Ctrl+fleches pour deplacer">
+      <div class="card-labels"></div>
+      <p class="card-title" title="Cliquer pour modifier"></p>
+      <button class="card-delete-btn" type="button" aria-label="Supprimer la carte">&times;</button>
+    </li>
+  </template>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
